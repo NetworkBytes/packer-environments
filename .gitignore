@@ -1,0 +1,7 @@
+.vars.sh
+.vars.bat
+packer_*
+**/.*.sw*
+bin/*
+output/*
+**/.DS_Store

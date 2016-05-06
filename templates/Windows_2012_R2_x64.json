@@ -1,0 +1,102 @@
+{
+  "variables": {
+    "name": null,
+    "host_name": null,
+
+    "user": null,
+    "password": null,
+
+    "vcenter_user": null,
+    "vcenter_password": null,
+    
+    "guest_os_type": null,
+    "iso_url": null
+
+  },
+
+
+  "builders": [
+    {
+      "type": "vmware-iso",
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum": "",
+      "iso_checksum_type": "none",
+      "shutdown_command": "shutdown /s /t 10 /f /d p:4:1 /c \"Packer Shutdown\"",
+
+      "headless": false,
+      "boot_wait": "12s",
+      "http_directory": "http",
+
+
+      "disk_size": 61440,
+
+      "vm_name": "{{user `name`}}",
+      "output_directory": "./output/{{user `name`}}",
+      "guest_os_type": "{{user `guest_os_type`}}",
+
+      "vmx_data": {
+        "memsize": "4096",
+        "numvcpus": "2",
+        "scsi0.virtualDev": "lsisas1068"
+      },
+
+      "floppy_files": [
+          "./answer_files/{{ user `basename` }}/Autounattend.xml",
+          "./scripts/windows/dotnet35.ps1",
+          "./files/VMWare/drivers/vmxnet3/NDIS6/*"
+      ],
+      
+      "communicator": "winrm",
+      "winrm_username": "{{user `user`}}",
+      "winrm_password": "{{user `password`}}",
+      "winrm_timeout": "20000m"
+    }
+  ],
+
+
+
+  "provisioners": [
+    {
+      "type": "powershell",
+      "scripts": [
+        "./scripts/windows/install_chocolatey.ps1",
+        "./scripts/windows/vm-guest-tools.ps1",
+        "./scripts/windows/disable_hibernation.ps1",
+        "./scripts/windows/enable_remotedesktop.ps1",
+        "./scripts/windows/disable_ipv6.ps1",
+        "./scripts/windows/proxy.ps1",
+        "./scripts/windows/puppet_install.ps1",
+        "./scripts/windows/puppet_run.ps1"
+      ]
+    },
+    {
+      "type": "windows-restart",
+      "restart_timeout": "10m"
+    },
+    {
+      "type": "powershell",
+      "scripts": [
+        "./scripts/windows/remove_puppet_certs.ps1"
+      ]
+    }
+  ],
+
+
+  "post-processors": [
+    {
+      "type": "vsphere",
+      "insecure": "true",
+      "disk_mode": "thin",
+      "username": "{{ user `vcenter_user` }}",
+      "password": "{{ user `vcenter_password` }}",
+      "vm_name": "{{ user `name` }}",
+      "host": "vcenter",
+      "datacenter": "DC1",
+      "cluster": "Cluster1",
+      "resource_pool": "ResourcePool1",
+      "datastore": "EMC",
+      "vm_network": "vmnetwork",
+      "vm_folder": "Templates"
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "variables": {
+    "name": null,
+    "host_name": null,
+
+    "user": null,
+    "password": null,
+
+    "vcenter_user": null,
+    "vcenter_password": null,
+    
+    "guest_os_type": null,
+    "iso_url": null
+
+  },
+
+
+  "builders": [
+    {
+      "type": "vmware-iso",
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum": "",
+      "iso_checksum_type": "none",
+      "shutdown_command": "/sbin/shutdown -P now",
+
+      "headless": false,
+      "boot_wait": "12s",
+      "http_directory": "http",
+
+      "boot_command": [
+        "<tab>",
+        " ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/kickstart/Redhat-7.2-x86_64-ks.cfg",
+        " text ",
+        " net.ifnames=0 biosdevname=0 ",
+        "<enter><wait>"
+      ],
+
+
+      "disk_size": 40000,
+
+      "vm_name": "{{user `name`}}",
+      "output_directory": "./output/{{user `name`}}",
+      "tools_upload_flavor": "linux",
+      "guest_os_type": "{{user `guest_os_type`}}",
+
+      "vmx_data": {
+        "memsize": "2048",
+        "numvcpus": "2"
+      },
+
+      "ssh_username": "{{user `user`}}",
+      "ssh_password": "{{user `password`}}",
+      "ssh_port": 22,
+      "ssh_wait_timeout": "20m"
+    }
+  ],
+
+
+
+  "provisioners": [
+    {
+      "type": "shell",
+      "scripts": [
+        "scripts/linux/temporary_host_entries.sh",
+        "scripts/linux/proxy.sh",
+        "scripts/linux/rhn_reg.sh",
+        "scripts/linux/epel.sh",
+        "scripts/linux/vmtools.sh",
+        "scripts/linux/base.sh",
+        "scripts/linux/puppet.sh"
+      ]
+    },
+    {
+      "type": "puppet-server",
+      "prevent_sudo": "true",
+      "options": "--test --pluginsync",
+      "puppet_node": "{{user `host_name`}}",
+      "client_cert_path": "./files/puppet/ssl/certs",
+      "client_private_key_path": "./files/puppet/ssl/private_keys"
+    },
+    {
+      "type": "shell",
+      "scripts": [
+        "scripts/linux/rhn_unreg.sh",
+        "scripts/linux/cleanup.sh",
+      ]
+    }
+  ],
+
+
+  "post-processors": [
+    {
+      "type": "vsphere",
+      "insecure": "true",
+      "disk_mode": "thin",
+      "username": "{{ user `vcenter_user` }}",
+      "password": "{{ user `vcenter_password` }}",
+      "vm_name": "{{ user `name` }}",
+      "host": "vcenter",
+      "datacenter": "DC1",
+      "cluster": "Cluster1",
+      "resource_pool": "ResourcePool1",
+      "datastore": "EMC",
+      "vm_network": "vmnetwork",
+      "vm_folder": "Templates"
+    }
+  ]
+}
