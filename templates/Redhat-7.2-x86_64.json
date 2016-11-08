@@ -1,16 +1,17 @@
 {
   "variables": {
-    "name": null,
-    "host_name": null,
-
-    "user": null,
-    "password": null,
-
-    "vcenter_user": null,
-    "vcenter_password": null,
+    "common_name": null,
+    "common_sshuser": null,
+    "common_sshpassword": null,
     
-    "guest_os_type": null,
-    "iso_url": null
+    "vmware-iso_iso_url": null,
+    "vmware-iso_vcenter_user": null,
+    "vmware-iso_vcenter_password": null,
+    "vmware-iso_guest_os_type": null,
+
+    "aws_access_key": null,
+    "aws_secret_key": null,
+    "aws_subnet_id": null
 
   },
 
@@ -18,7 +19,7 @@
   "builders": [
     {
       "type": "vmware-iso",
-      "iso_url": "{{user `iso_url`}}",
+      "iso_url": "{{user `vmware-iso_iso_url`}}",
       "iso_checksum": "",
       "iso_checksum_type": "none",
       "shutdown_command": "/sbin/shutdown -P now",
@@ -38,30 +39,42 @@
 
       "disk_size": 40000,
 
-      "vm_name": "{{user `name`}}",
-      "output_directory": "./output/{{user `name`}}",
+      "vm_name": "{{user `common_name`}}",
+      "output_directory": "./output/{{user `common_name`}}",
       "tools_upload_flavor": "linux",
-      "guest_os_type": "{{user `guest_os_type`}}",
+      "guest_os_type": "{{user `vmware-iso_guest_os_type`}}",
 
       "vmx_data": {
         "memsize": "2048",
         "numvcpus": "2"
       },
 
-      "ssh_username": "{{user `user`}}",
-      "ssh_password": "{{user `password`}}",
+      "ssh_username": "{{user `common_sshuser`}}",
+      "ssh_password": "{{user `common_sshpassword`}}",
       "ssh_port": 22,
       "ssh_wait_timeout": "20m"
+    },
+    
+    
+    {
+      "type": "amazon-ebs",
+      "access_key": "{{user `aws_access_key`}}",
+      "secret_key": "{{user `aws_secret_key`}}",
+      "region": "ap-southeast-2",
+      "subnet_id": "{{user `aws_subnet_id`}}",
+      "source_ami": "ami-db704cb8",
+      "instance_type": "t2.micro",
+      "ssh_username": "{{user `common_sshuser`}}",
+      "ami_name": "{{user `common_name`}}",
+      "associate_public_ip_address": true
     }
   ],
-
 
 
   "provisioners": [
     {
       "type": "shell",
       "scripts": [
-        "scripts/linux/temporary_host_entries.sh",
         "scripts/linux/proxy.sh",
         "scripts/linux/rhn_reg.sh",
         "scripts/linux/epel.sh",
@@ -74,7 +87,7 @@
       "type": "puppet-server",
       "prevent_sudo": "true",
       "options": "--test --pluginsync",
-      "puppet_node": "{{user `host_name`}}",
+      "puppet_node": "{{user `common_node_name`}}",
       "client_cert_path": "./files/puppet/ssl/certs",
       "client_private_key_path": "./files/puppet/ssl/private_keys"
     },
@@ -90,12 +103,13 @@
 
   "post-processors": [
     {
+      "only": ["vmware-iso"],
       "type": "vsphere",
       "insecure": "true",
       "disk_mode": "thin",
-      "username": "{{ user `vcenter_user` }}",
-      "password": "{{ user `vcenter_password` }}",
-      "vm_name": "{{ user `name` }}",
+      "username": "{{ user `vmware-iso_vcenter_user` }}",
+      "password": "{{ user `vmware-iso_vcenter_password` }}",
+      "vm_name": "{{ user `common_name` }}",
       "host": "vcenter",
       "datacenter": "DC1",
       "cluster": "Cluster1",

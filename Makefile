@@ -19,10 +19,13 @@ export PACKER_LOG PACKER_LOG_PATH
 	$(cmds) $(foreach proj,$(projs), $(addsuffix -$(proj),$(cmds))) \
 	all $(projs)
 
+
 helptext:
 	@echo "No target supplied. use 'make <command>-<templatename>'\n\n"
-	@echo "List of possble commands:\n" $(foreach cmd,$(cmds), "$(cmd)\n")
-	@echo "List of possble templates:\n" $(foreach proj,$(projs), "$(proj)\n")
+	@echo "List of possible commands:\n" $(foreach cmd,$(cmds), "$(cmd)\n")
+	@echo "List of possible templates:\n" $(foreach proj,$(projs), \
+	"$(proj) => \t $(shell $(PACKEREXE) inspect $(TEMPLATESDIR)/$(addsuffix .json, $(proj)) -machine-readable \
+	|grep template-builder|awk -F, '{print $$4}')\n")
 
 
 # dep management tasks
